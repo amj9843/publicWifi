@@ -112,8 +112,5 @@
 			</c:choose>
 		</tbody>
 	</table>
-<% 
-	out.println(java.time.LocalDateTime.now());
-%>
 </body>
 </html>

@@ -8,6 +8,7 @@
 <%@page import="java.util.HashMap" %>
 
 <%@ page import="services.wifi_service" %>
+<%@ page import="services.bookmark_service" %>
 
 <!DOCTYPE html>
 <html>
@@ -26,7 +27,22 @@
 		
 		wifi_service wifiService = new wifi_service();
 		Map<String, Object> wifiDetail = wifiService.getWifiInfo(managementId);
+		
+		bookmark_service bookmarkService = new bookmark_service();
+		ArrayList<Map<String,Object>> bookmarkGroups = bookmarkService.getBookmarkGroups();
 	%>
+	
+	<form method="post" action="bookmark-add.jsp" id="bookmarkList">
+        <select name="bookmarkId">
+            <option value="" selected>북마크 그룹 이름 선택</option>
+            <% for (Map<String, Object> bookmarkGroup: bookmarkGroups) {%>
+            <option value="<%=bookmarkGroup.get("id") %>"><%=bookmarkGroup.get("groupName") %></option>
+            <% } %>
+        </select>
+        <input type="submit" value="북마크 추가하기">
+        <input type="hidden" name="managementId" value="<%=managementId%>">
+        <input type="hidden" name="id" value="<%=wifiDetail.get("id") %>">
+    </form>
 	
 	<table>
 		<tr>

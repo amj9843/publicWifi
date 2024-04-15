@@ -266,6 +266,192 @@ public class repository_service {
     	return wifiInfo;
     }
     
+    public ArrayList<Map<String, Object>> getBookmarkGroups() throws SQLException {
+    	if (!checkTable("BOOKMARK_GROUP")) {
+    		createTable("BOOKMARK_GROUP");
+    	}
+    	
+    	ArrayList<Map<String, Object>> bookmarkGroups = new ArrayList<>();
+    	String SQL = "SELECT * FROM BOOKMARK_GROUP ORDER BY SEQ_NUM ASC";
+    	
+    	try {
+    		pstmt = conn.prepareStatement(SQL);
+
+    		ResultSet rs = pstmt.executeQuery();
+    		
+    		while (rs.next()) {
+    			Map<String, Object> bookmarkGroup = new HashMap<>();
+    			bookmarkGroup.put("id", rs.getInt("ID"));
+    			bookmarkGroup.put("groupName", rs.getString("GROUP_NAME"));
+    			bookmarkGroup.put("createTime", rs.getString("CREATE_TIME"));
+    			bookmarkGroup.put("modifyTime", rs.getString("MODIFY_TIME"));
+    			bookmarkGroup.put("seqNum", rs.getString("SEQ_NUM"));
+    			
+    			bookmarkGroups.add(bookmarkGroup);
+    		}
+    	} catch (SQLException e) {
+    		System.out.println(e.getMessage());
+    	}
+    	
+    	return bookmarkGroups;
+    }
+    
+	public Map<String, Object> getBookmarkGroup(int id) throws SQLException {
+		if (!checkTable("BOOKMARK_GROUP")) {
+    		createTable("BOOKMARK_GROUP");
+    	}
+    	
+    	Map<String, Object> bookmarkGroup = new HashMap<>();
+    	String SQL = " SELECT * from BOOKMARK_GROUP WHERE ID = ?";
+    	
+    	try {
+    		pstmt = conn.prepareStatement(SQL);
+    		pstmt.setInt(1, id);
+            
+    		ResultSet rs = pstmt.executeQuery();
+    		
+    		while (rs.next()) {
+    			bookmarkGroup.put("id", rs.getInt("ID"));
+    			bookmarkGroup.put("groupName", rs.getString("GROUP_NAM"));
+    			bookmarkGroup.put("createTime", rs.getString("CREATE_TIME"));
+    			bookmarkGroup.put("modifyTime", rs.getString("MODIFY_TIME"));
+    			bookmarkGroup.put("seqNum", rs.getString("SEQ_NUM"));
+    		}
+    	} catch (SQLException e) {
+    		System.out.println(e.getMessage());
+    	}
+    	
+		return bookmarkGroup;
+	}
+	
+	public int deleteBookmarkGroup(int id) throws SQLException {
+    	if (!checkTable("BOOKMARK_GROUP")) {
+    		createTable("BOOKMARK_GROUP");
+    	}
+    	
+    	if (!checkTable("BOOKMARK_LIST")) {
+    		createTable("BOOKMARK_LIST");
+    	}
+    	
+    	String SQL_LIST = "DELETE FROM BOOKMARK_LIST WHERE 1=1 AND GROUP_ID = ?";
+    	String SQL_GROUP = "DELETE FROM BOOKMARK_GROUP WHERE 1=1 AND ID = ?";
+    	
+    	//1. BOOKMARK_LIST 내 그룹에 해당하는 항목들 제거
+    	try {
+    		pstmt = conn.prepareStatement(SQL_LIST);
+    		
+    		pstmt.setInt(1, id);
+    		
+    		pstmt.executeUpdate();
+    		conn.commit();
+    		
+    		System.out.printf("%d번 그룹 내 wifi 정보들 삭제 완료\n", id);
+    	} catch (SQLException e) {
+    		System.out.println(e.getMessage());
+    		return -1;
+    	}
+    	
+    	//2. BOOKMARK_GROUP에서 해당하는 그룹 제거
+    	try {
+    		pstmt = conn.prepareStatement(SQL_GROUP);
+    		
+    		pstmt.setInt(1, id);
+    		
+    		pstmt.executeUpdate();
+    		conn.commit();
+    		
+    		System.out.printf("%d번 그룹 삭제 완료\n", id);
+    	} catch (SQLException e) {
+    		System.out.println(e.getMessage());
+    		return -1;
+    	} finally  {
+            // PreparedStatement 종료
+            if( pstmt != null ) {
+                try {
+                    pstmt.close();
+                } catch ( SQLException e ) {
+                    e.printStackTrace();
+                    return -1;
+                }
+            }
+        }
+    	
+    	return 1;
+    }
+    
+    public int addBookmarkGroup(String name, int seqNum, String registTime) throws SQLException {
+    	if (!checkTable("BOOKMARK_GROUP")) {
+    		createTable("BOOKMARK_GROUP");
+    	}
+    	
+    	String SQL = "INSERT INTO BOOKMARK_GROUP (GROUP_NAME, CREATE_TIME, SEQ_NUM) VALUES(?, ?, ?)";
+    	
+    	if (seqNum == 0) {
+        	seqNum = 1;
+    	}
+    	
+    	try {
+    		pstmt = conn.prepareStatement("SELECT * FROM BOOKMARK_GROUP WHERE 1=1 AND GROUP_NAME = ?");
+    		
+    		pstmt.setString(1, name);
+    		ResultSet rs = pstmt.executeQuery();
+    		
+    		if (rs.next()) {
+    			return 0;
+    		} else {
+    			pstmt = conn.prepareStatement(SQL);
+    			
+    			pstmt.setString(1, name);
+        		pstmt.setString(2, registTime);
+    			pstmt.setInt(3, seqNum);
+    			
+    			pstmt.executeUpdate();
+                conn.commit();
+                
+                return 1;
+    		}
+    	} catch (SQLException e) {
+    		System.out.println(e.getMessage());
+    		
+    		return -1;
+    	}
+    }
+    
+    public int addBookmark(int bookmarkId, int wifiId, String registTime) throws SQLException {
+    	if (!checkTable("BOOKMARK_LIST")) {
+    		createTable("BOOKMARK_LIST");
+    	}
+    	
+    	String SQL = "SELECT * FROM BOOKMARK_LIST WHERE 1=1 AND WIFI_ID = ? AND GROUP_ID = ?";
+    	
+    	try {
+    		pstmt = conn.prepareStatement(SQL);
+    		
+    		pstmt.setInt(1, wifiId);
+    		pstmt.setInt(2, bookmarkId);
+    		ResultSet rs = pstmt.executeQuery();
+    		
+    		if (rs.next()) {
+    			return 0;
+    		} else {
+    			pstmt = conn.prepareStatement("INSERT INTO BOOKMARK_LIST (WIFI_ID, GROUP_ID, REGIST_TIME) VALUES(?, ?, ?)");
+    			
+    			pstmt.setInt(1, wifiId);
+        		pstmt.setInt(2, bookmarkId);
+    			pstmt.setString(3, registTime);
+    			
+    			pstmt.executeUpdate();
+                conn.commit();
+                
+                return 1;
+    		}
+    	} catch (SQLException e) {
+    		System.out.println(e.getMessage());
+    		
+    		return -1;
+    	}
+    }
+    
     public void insertWifiInfo(JsonObject data) {
     	String SQL = "INSERT INTO WIFI_INFO ("
     			+ "MANAGEMENT_ID, WIFI_NAME, LATITUDE, LONGITUDE, STATE, ADDRESS, ADDRESS_DETAIL, INSTALL_FLOOR, INSTALL_TYPE,"
